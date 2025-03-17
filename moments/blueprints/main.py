@@ -10,6 +10,15 @@ from moments.models import Collection, Comment, Follow, Notification, Photo, Tag
 from moments.notifications import push_collect_notification, push_comment_notification
 from moments.utils import flash_errors, redirect_back, rename_image, resize_image, validate_image
 
+# LIBRERIAS AZURE Y NGROK
+from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+from msrest.authentication import CognitiveServicesCredentials
+from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
+from pyngrok import ngrok
+import time
+
+
+
 main_bp = Blueprint('main', __name__)
 
 
@@ -425,4 +434,122 @@ def delete_tag(photo_id, tag_id):
         db.session.commit()
 
     flash('Tag deleted.', 'info')
+    return redirect(url_for('.show_photo', photo_id=photo_id))
+
+
+AZURE_COMPUTER_VISION_KEY = "ChfecyUFiPg2gpLJjitwZQXCQtDhZF4vtjHHOiZK5bZ7GswGYKYAJQQJ99BCACYeBjFXJ3w3AAAFACOGDiHF"
+AZURE_COMPUTER_VISION_ENDPOINT = "https://nvgg-domain.cognitiveservices.azure.com/"
+
+@main_bp.route('/photo/<int:photo_id>/generate-description', methods=['POST'])
+@login_required
+def generate_description(photo_id):
+    print("PRUEBA1*******************************")
+    photo = db.session.get(Photo, photo_id) or abort(404)
+    if current_user != photo.author and not current_user.can('MODERATE'):
+        abort(403)
+
+    # Azure Computer Vision setup
+    subscription_key = AZURE_COMPUTER_VISION_KEY
+    endpoint = AZURE_COMPUTER_VISION_ENDPOINT
+    if not endpoint:
+        current_app.logger.error("Azure Computer Vision endpoint is not configured.")
+        flash('Azure Computer Vision endpoint is missing. Please contact the administrator.', 'danger')
+        return redirect(url_for('.show_photo', photo_id=photo_id))
+    
+    # Authenticate client
+    computervision_client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
+
+    # Image URL or path
+    local_image_url = url_for('main.get_image', filename=photo.filename, _external=True)
+    print("Local Image URL: ", local_image_url)
+
+    try:
+        # Start ngrok to expose the local server
+        ngrok_tunnel = ngrok.connect(5000)  # Returns an NgrokTunnel object
+        public_url = ngrok_tunnel.public_url  # Extract the public URL as a string
+        print(f"Public URL: {public_url}")
+
+        # Replace the local URL with the ngrok public URL
+        public_image_url = local_image_url.replace("http://127.0.0.1:5000", public_url)
+        print(f"Public Image URL: {public_image_url}")
+
+        # Analyze the image for a description
+        description_result = computervision_client.describe_image(public_image_url)
+        #print("DESCRIPCION: ", description_result)
+        
+        if description_result.captions:
+            # Use the first caption as the description
+            photo.description = description_result.captions[0].text
+            db.session.commit()
+            flash('Description generated and assigned successfully.', 'success')
+        else:
+            flash('No description could be generated for this image.', 'warning')
+    except Exception as e:
+        current_app.logger.error(f"Azure Computer Vision error: {e}")
+        flash('Failed to generate description. Please try again later.', 'danger')
+    finally:
+        # Stop ngrok when done
+        ngrok.disconnect(public_url)
+
+    return redirect(url_for('.show_photo', photo_id=photo_id))
+
+
+AZURE_COMPUTER_VISION_KEY1 = "ChfecyUFiPg2gpLJjitwZQXCQtDhZF4vtjHHOiZK5bZ7GswGYKYAJQQJ99BCACYeBjFXJ3w3AAAFACOGDiHF"
+AZURE_COMPUTER_VISION_ENDPOINT1 = "https://nvgg-domain.cognitiveservices.azure.com/"
+
+
+@main_bp.route('/photo/<int:photo_id>/generate-tags', methods=['POST'])
+@login_required
+def generate_tags(photo_id):
+    print("PRUEBA2*******************************")
+    photo = db.session.get(Photo, photo_id) or abort(404)
+    if current_user != photo.author and not current_user.can('MODERATE'):
+        abort(403)
+
+    # Azure Computer Vision setup
+    subscription_key = AZURE_COMPUTER_VISION_KEY1
+    endpoint = AZURE_COMPUTER_VISION_ENDPOINT1
+    if not endpoint:
+        current_app.logger.error("Azure Computer Vision endpoint is not configured.")
+        flash('Azure Computer Vision endpoint is missing. Please contact the administrator.', 'danger')
+        return redirect(url_for('.show_photo', photo_id=photo_id))
+
+    # Authenticate client
+    computervision_client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
+
+    # Image URL or path
+    local_image_url = url_for('main.get_image', filename=photo.filename, _external=True)
+    print("Local Image URL: ", local_image_url)
+
+    try:
+        # Start ngrok to expose the local server
+        ngrok_tunnel = ngrok.connect(5000)  # Returns an NgrokTunnel object
+        public_url = ngrok_tunnel.public_url  # Extract the public URL as a string
+        print(f"Public URL: {public_url}")
+        
+        # Replace the local URL with the ngrok public URL
+        public_image_url = local_image_url.replace("http://127.0.0.1:5000", public_url)
+        print(f"Public Image URL: {public_image_url}")
+
+        # Analyze the image for tags
+        analysis_result = computervision_client.analyze_image(public_image_url, visual_features=["Tags"])
+        #print("ANALISIS: ", analysis_result)
+        if analysis_result.tags:
+            for tag_data in analysis_result.tags:
+                tag_name = tag_data.name
+                tag = db.session.scalar(select(Tag).filter_by(name=tag_name))
+                if tag is None:
+                    tag = Tag(name=tag_name)
+                    db.session.add(tag)
+                    db.session.commit()
+                if tag not in photo.tags:
+                    photo.tags.append(tag)
+                    db.session.commit()
+            flash('Tags generated and assigned successfully.', 'success')
+        else:
+            flash('No tags could be generated for this image.', 'warning')
+    except Exception as e:
+        current_app.logger.error(f"Azure Computer Vision error: {e}")
+        flash('Failed to generate tags. Please try again later.', 'danger')
+
     return redirect(url_for('.show_photo', photo_id=photo_id))

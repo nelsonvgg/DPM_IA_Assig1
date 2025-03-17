@@ -47,11 +47,12 @@
     </div>
     {% if current_user == photo.author %}
     <div id="description-form">
-      <form action="{{ url_for('.edit_description', photo_id=photo.id) }}" method="post">
-        {{ description_form.csrf_token }}
-        {{ render_field(description_form.description) }}
-        <a class="btn btn-light btn-sm" id="cancel-description">Cancel</a>
-        {{ render_field(description_form.submit, class='btn-success btn-sm description-submit-btn') }}
+      <form action="{{ url_for('.edit_description', photo_id=photo.id) }}" method="post" style="display: inline;">
+      {{ description_form.csrf_token }}
+      {{ render_field(description_form.description) }}
+      <a class="btn btn-light btn-sm" id="cancel-description">Cancel</a>
+      {{ render_field(description_form.submit, class='btn-success btn-sm description-submit-btn') }}
+      <button type="submit" formaction="{{ url_for('.generate_description', photo_id=photo.id) }}" class="btn btn-primary">Generate AI</button>
       </form>
     </div>
     {% endif %}
@@ -80,7 +81,8 @@
         {{ render_field(tag_form.tag) }}
         <a class="btn btn-light btn-sm" id="cancel-tag">Cancel</a>
         {{ render_field(tag_form.submit, class='btn btn-success btn-sm') }}
-      </form>
+        <button type="submit" formaction="{{ url_for('.generate_tags', photo_id=photo.id) }}" class="btn btn-primary">Generate Tag AI</button>
+      </form>      
       {% if photo.tags %}
       <hr>
       {% for tag in photo.tags %}
