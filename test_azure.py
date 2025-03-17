@@ -7,7 +7,7 @@ AZURE_COMPUTER_VISION_KEY = "ChfecyUFiPg2gpLJjitwZQXCQtDhZF4vtjHHOiZK5bZ7GswGYKY
 AZURE_COMPUTER_VISION_ENDPOINT = "https://nvgg-domain.cognitiveservices.azure.com/"
 
 # Test image URL
-local_image_url = "http://127.0.0.1:5000/images/4b1f94e030cd4193be65cf36b1865b32.png"  # Replace with a valid image URL
+local_image_url = "http://127.0.0.1:5000/images/a07f77d2059344abb13bf0836d088e90.png_m.png"  # Replace with a valid image URL
 
 def test_generate_description():
     # Start ngrok to expose the local server
