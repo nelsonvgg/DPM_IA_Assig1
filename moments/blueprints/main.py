@@ -437,8 +437,6 @@ def delete_tag(photo_id, tag_id):
     return redirect(url_for('.show_photo', photo_id=photo_id))
 
 
-AZURE_COMPUTER_VISION_KEY = "ChfecyUFiPg2gpLJjitwZQXCQtDhZF4vtjHHOiZK5bZ7GswGYKYAJQQJ99BCACYeBjFXJ3w3AAAFACOGDiHF"
-AZURE_COMPUTER_VISION_ENDPOINT = "https://nvgg-domain.cognitiveservices.azure.com/"
 
 @main_bp.route('/photo/<int:photo_id>/generate-description', methods=['POST'])
 @login_required
@@ -492,10 +490,6 @@ def generate_description(photo_id):
         ngrok.disconnect(public_url)
 
     return redirect(url_for('.show_photo', photo_id=photo_id))
-
-
-AZURE_COMPUTER_VISION_KEY1 = "ChfecyUFiPg2gpLJjitwZQXCQtDhZF4vtjHHOiZK5bZ7GswGYKYAJQQJ99BCACYeBjFXJ3w3AAAFACOGDiHF"
-AZURE_COMPUTER_VISION_ENDPOINT1 = "https://nvgg-domain.cognitiveservices.azure.com/"
 
 
 @main_bp.route('/photo/<int:photo_id>/generate-tags', methods=['POST'])
